@@ -10,13 +10,11 @@ const authRoutes = require('./routes/authRoutes');
 const errorHandler = require("./middlewares/errorMiddleware");
 
 
-
-
 //dotenv
 dotenv.config();
 
-const username = "lavishk5012";
-const password = "lavish@123";
+const username = process.env.DP_USERNAME;
+const password = process.env.DP_PASSWORD;
 
 //mongo coonection
 Connection(username,password);

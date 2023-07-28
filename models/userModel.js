@@ -1,7 +1,4 @@
 const mongoose = require('mongoose')
-const bcrypt = require('bcryptjs')
-const JWT = require('jsonwebtoken')
-const cookie=require('cookie')
 
 const userSchema=new mongoose.Schema({
     username:{
@@ -17,47 +14,11 @@ const userSchema=new mongoose.Schema({
         type:String,
         required:[true,'Password is required'],
         minlength:[6,'Password length should at atleast 6 characters'],
-    },
-    customerId:{
-        type:String,
-        default:"",
-    },
-    subscription:{
-        type:String,
-        default:"",
-    },
-});
-
-// password ko hash krege
-userSchema.pre('save',async function(next){
-    //update
-    if(!this.isModified("password")){
-        next()
     }
-    const salt=await bcrypt.genSalt(10)
-    this.password=await bcrypt.hash(this.password,salt);
-    next();
-});
+},
+    {timeStamps:true}
+);
 
-//password ko check kro ki user ne shi dala hai ya nhi
-userSchema.methods.matchPassword=async function(password){
-    return await bcrypt.compare(password,this.password)
-}
-
-//sign token
-userSchema.methods.getSignedToken=function(res){
-    const accessToken = JWT.sign(
-        {id:this.id},process.env.JWT_ACCESS_SECRET,
-        {expiresIn:process.env.JWT_ACCESS_EXPIREIN}
-        );
-    const refreshToken = JWT.sign(
-        {id:this.id},process.env.JWT_REFRESH_SECRET,
-        {expiresIn:process.env.JWT_REFRESH_EXPIREIN}
-        );
-    res.cookie('refreshToken',`${refreshToken}`,{
-        maxAge:86400 *7000,httpOnly:true}
-        )
-};
 
 const User=mongoose.model("User",userSchema);
 
