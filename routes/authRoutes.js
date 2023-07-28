@@ -1,17 +1,20 @@
 const express=require('express')
-const { registerController, loginController, logoutController } = require('../controllers/authController')
+const { getUser,postUser,deleteUser,updateUser } = require('../controllers/authController')
 
 //router object
-const router= express.Router()
+const userRouter= express.Router()
 
 //routes
 
-//register k liye
-router.post('/register',registerController);
+userRouter
+.route("/")
+.get(getUser)
+.post(postUser)
 
-//login k liye
-router.post('/login',loginController);
+//params
+userRouter
+.route("/:id")
+.delete(deleteUser)
+.patch(updateUser)
 
-//logout k liye
-router.post('/logout',logoutController);
-module.exports=router
+module.exports=userRouter;

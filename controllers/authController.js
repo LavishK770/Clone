@@ -1,64 +1,92 @@
-const userModel=require('../models/userModel');
-const errorResponse = require('../utils/errorResponse');
+const users = require('../models/userModel');
+//const errorResponse = require('../utils/errorResponse');
+const bcrypt=require('bcryptjs');
+const jwt =require('jsonwebtoken');
+const {validationResult}=require("express-validator");
 
-exports.sendToken=(user,statusCode,res)=>{
-    const token=user.getSignedToken(res)
-    res.status(statusCode).json({
-        success:true,
-        token,
-    });
-};
+const JWT_SECRET='Kaustubh';
 
-//Register
-exports.registerController=async(req,res,next)=>{
-    try{
-        const {username,email,password}=req.body
-        //check existing user
-        const existingEmail=await userModel.findOne({email})
-        if(existingEmail){
-            return next(new errorResponse('Email is already registered',500))
-        }
-        const user= await userModel.create({username,email,password})
-        this.sendToken(user,201,res)
-
-    }catch(error){
-        console.log(error)
-        next(error)
-    }
-}
-
-//login
-exports.loginController = async(req,res,next)=>{
-    try{
-        const {email,password}=req.body
-        //check existing user
-        const existingEmail=await userModel.findOne({email})
-        if(!email || !password){
-            return next(new errorResponse('Please provide email or password'))
-        }
-        const user= await userModel.findOne({email})
-        if(!user){
-            return next(new errorResponse("Invalid Username or PAssword",401))
-        }
-        const isMatch=await userModel.matchPassword(password)
-        if(!isMatch){
-            return next(new errorResponse("Invalid Username or PAssword",401))
-        }
-        //agr sb thk hai
-        sendToken(user,200,res);
-
-    }catch(error){
-        console.log(error)
-        next(error)
-    }
+ const getUser=async (req,res)=>{
+    let user=await users.find({});
+    res.json({
+       message:'list of all users',
+       data:user});
 };
 
 
-//logout
-exports.logoutController = async(req,res)=>{
-    res.clearCookie('refreshToken')
-    return res.status(200).json({
-        success:true,
-        message:"Logout Ho Gya",
-    })
+//frontened to backend
+ const postUser=async(req,res)=>{ 
+   // If there are errors, return Bad request and the errors
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+     return res.status(400).json({ errors: errors.array() });
+   }
+   try {
+     // Check whether the user with this email exists already
+     let user = await users.findOne({ email: req.body.email });
+     if (user) {
+       return res.status(400).json({ error: "Sorry a user with this email already exists" })
+     }
+ 
+     const salt = await bcrypt.genSalt(10);
+     const secPass = await bcrypt.hash(req.body.password, salt);
+ 
+     // Create a new user
+     user = await users.create({
+       username: req.body.username,
+       email: req.body.email,
+       password: secPass,
+     });
+ 
+     const data = {
+         user: {
+           id: user.id
+         }
+       }
+       console.log(data);
+       const authtoken = jwt.sign(data, JWT_SECRET);
+   
+       // res.json(user)
+       res.json({ authtoken })
+   
+   } catch (error) {
+     console.error(error.message);
+     res.status(500).send("Internal Server Error");
+   }
+ };
+
+ //update user details
+ const updateUser=async(req,res)=>{
+    let dataUpdate=req.body;
+    //search user in db
+    let node=await users.findByIdAndUpdate(req.params.id,dataUpdate);
+    //if user not found then
+    if(!node){
+        return res.status(404).send("not found")
+    }
+   res.json({
+    message:"User Data has been updated",
+    data:node
+   });
+ }
+
+ //delete users 
+const deleteUser=async(req,res)=>{
+    let node=await users.findById(req.params.id);
+    if(!node){
+        return res.status(404).send("not found")
+    }
+   
+    node=await users.findByIdAndDelete(req.params.id);
+    res.json({
+        message:"data has been deleted successfully",
+        data:node
+    }) 
+};
+
+module.exports={
+    getUser,
+    postUser,
+    deleteUser,
+    updateUser
 };
